@@ -27,5 +27,3 @@ def load_data(filename, n):
         M = int(input())
         points = generate_random_points(n)
     return M, points
-
-print(load_data("k", 5))
