@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import (
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.patches import Circle
-
+from genetic_algorithm import GeneticAlgorithm
 
 class GAWindow(QMainWindow):
     def __init__(self):
@@ -19,7 +19,7 @@ class GAWindow(QMainWindow):
         self.init_ui()
 
         self.points = []
-        self.circles = []
+        self.ga = None
 
     def init_ui(self):
         main_widget = QWidget()
@@ -43,11 +43,11 @@ class GAWindow(QMainWindow):
         self.btn_init.clicked.connect(self.init_circles)
         layout.addWidget(self.btn_init)
 
-        self.btn_step = QPushButton("Следующий шаг не работает")
+        self.btn_step = QPushButton("Следующий шаг")
         self.btn_step.clicked.connect(self.step_ga)
         layout.addWidget(self.btn_step)
 
-        self.btn_run = QPushButton("До конца не работает")
+        self.btn_run = QPushButton("До конца")
         self.btn_run.clicked.connect(self.run_to_end)
         layout.addWidget(self.btn_run)
 
@@ -60,9 +60,14 @@ class GAWindow(QMainWindow):
         self.param_widgets = {}
         form = QFormLayout()
         param_defs = {
+            'pop_size': (10, 200, 20),
+            'num_generations': (1, 200, 50),
+            'crossover_rate': (0.0, 1.0, 0.7),
             'mutation_rate': (0.0, 1.0, 0.1),
+            'penalty_coeff': (0.0, 5.0, 1.0),
             'r_max': (1.0, 50.0, 20.0),
-            'num_generations': (1, 1000, 50),
+            'sigma': (0.1, 20.0, 5.0),
+            'tournament_size': (1, 10, 3),
             'circles_count': (1, 20, 5),
         }
 
@@ -85,13 +90,6 @@ class GAWindow(QMainWindow):
         self.btn_clear.setStyleSheet("background-color: red; color: white; font-weight: bold;")
         layout.addWidget(self.btn_clear)
 
-    def get_params(self):
-        return {k: w.value() for k, w in self.param_widgets.items()}
-
-    def generate_points(self):
-        self.points = [(random.uniform(0, 100), random.uniform(0, 100)) for _ in range(40)]
-        self.canvas.set_data(self.points, self.circles)
-
     def init_circles(self):
         params = self.get_params()
         count = params['circles_count']
@@ -105,6 +103,20 @@ class GAWindow(QMainWindow):
             self.circles.append((x, y, r))
 
         self.canvas.set_data(self.points, self.circles)
+        
+    def get_params(self):
+        return {k: w.value() for k, w in self.param_widgets.items()}
+
+    def generate_points(self):
+        self.points = [(random.uniform(0, 100), random.uniform(0, 100)) for _ in range(40)]
+        self.canvas.set_data(self.points, self.circles)
+
+    def init_ga(self):
+        if not hasattr(self, "points"):
+            self.generate_points()
+        self.ga = GeneticAlgorithm(self.points, self.get_params())
+        self.ga.initialize_population()
+        self.canvas.set_ga(self.ga)
 
     def step_ga(self):
         print("Следующий шаг не работает")
