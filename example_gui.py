@@ -8,6 +8,8 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from genetic_algorithm import GeneticAlgorithm
 
+from matplotlib.patches import Circle
+from genetic_algorithm import GeneticAlgorithm
 
 class GAWindow(QMainWindow):
     def __init__(self):
@@ -90,12 +92,28 @@ class GAWindow(QMainWindow):
         self.btn_clear.setStyleSheet("background-color: red; color: white; font-weight: bold;")
         layout.addWidget(self.btn_clear)
 
+
+    def init_circles(self):
+        params = self.get_params()
+        count = params['circles_count']
+        r_max = params['r_max']
+        self.circles = []
+
+        for _ in range(count):
+            x = random.uniform(0, 100)
+            y = random.uniform(0, 100)
+            r = random.uniform(5, r_max)
+            self.circles.append((x, y, r))
+
+        self.canvas.set_data(self.points, self.circles)
+        
     def get_params(self):
         return {k: w.value() for k, w in self.param_widgets.items()}
 
     def generate_points(self):
         self.points = [(random.uniform(0, 100), random.uniform(0, 100)) for _ in range(40)]
         self.canvas.set_points(self.points)
+        self.canvas.set_data(self.points, self.circles)
 
     def init_ga(self):
         if not hasattr(self, "points"):
