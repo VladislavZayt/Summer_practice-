@@ -4,14 +4,15 @@ import random
 import math
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QPushButton, QLabel,
-    QVBoxLayout, QHBoxLayout, QFormLayout, QSpinBox, QDoubleSpinBox
+    QVBoxLayout, QHBoxLayout, QFormLayout, QSpinBox, QDoubleSpinBox,
+    QInputDialog, QFileDialog
 )
 from PyQt5.QtCore import QTimer
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.patches import Circle
 from genetic_algorithm import GeneticAlgorithm
-
+from input import load_data
 
 class GAWindow(QMainWindow):
     def __init__(self):
@@ -46,6 +47,10 @@ class GAWindow(QMainWindow):
         self.btn_generate = QPushButton("Генерировать точки")
         self.btn_generate.clicked.connect(self.generate_points)
         layout.addWidget(self.btn_generate)
+
+        self.btn_load_file = QPushButton("Загрузить точки из файла")
+        self.btn_load_file.clicked.connect(self.load_points_from_file)
+        layout.addWidget(self.btn_load_file)
 
         self.btn_init = QPushButton("Инициализация")
         self.btn_init.clicked.connect(self.init_ga)
@@ -121,6 +126,15 @@ class GAWindow(QMainWindow):
         self.points = [(random.uniform(0, 100), random.uniform(0, 100)) for _ in range(num_points)]
         self.canvas.set_points(self.points)
 
+    def load_points_from_file(self):
+        filename, _ = QFileDialog.getOpenFileName(self, "Выберите файл", "", "Text Files (*.txt);;All Files (*)")
+        if not filename:
+            return
+        n, _ = QInputDialog.getInt(self, " ", "Сколько точек загрузить?", min=1)
+        self.points = load_data(filename, n)
+        self.canvas.set_points(self.points)
+        self.param_widgets["num_points"].setValue(n)
+
     def get_params(self):
         return {k: w.value() for k, w in self.param_widgets.items()}
 
@@ -150,6 +164,7 @@ class GAWindow(QMainWindow):
                     self.ga.history.append(copy.deepcopy(self.ga.population))
                 self.canvas.update_plot()
                 self.print_generation_stats()
+                self.ga.save_best_solution("best_solution.txt")
             except Exception as e:
                 print("Ошибка при выполнении до конца:", e)
 

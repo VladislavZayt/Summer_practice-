@@ -386,3 +386,14 @@ class GeneticAlgorithm:
 
     def reset(self):
         self.initialize_population()
+    
+    def save_best_solution(self, filename="best_solution.txt"):
+        indx = self.current_fitness.index(max(self.current_fitness))
+        best_solution = self.population[indx]
+        with open(filename, 'w') as file:
+            file.write("Лучшее решение:\n")
+            for i in range(self.M):
+                x = best_solution[3 * i]
+                y = best_solution[3 * i + 1]
+                r = best_solution[3 * i + 2]
+                file.write(f"Окружность {i + 1}: x = {x:.3f}, y = {y:.3f}, r = {r:.3f}\n")
