@@ -5,7 +5,7 @@ import math
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QPushButton, QLabel,
     QVBoxLayout, QHBoxLayout, QFormLayout, QSpinBox, QDoubleSpinBox,
-    QInputDialog, QFileDialog
+    QInputDialog, QFileDialog, QComboBox
 )
 from PyQt5.QtCore import QTimer
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -29,6 +29,8 @@ class GAWindow(QMainWindow):
         self.ga = None
         self.current_step = 0
         self.max_steps = 0
+        self.crossover_type = 0
+        self.mutation_type = 0
 
     def init_ui(self):
         main_widget = QWidget()
@@ -73,21 +75,45 @@ class GAWindow(QMainWindow):
         layout.addWidget(self.btn_step_through)
 
         layout.addWidget(QLabel("Параметры:"))
+        
+        self.combo_box = QComboBox()
+        self.combo_box.addItems(["Одноточечное скрещивание", "Двухточечное скрещивание", "Равномерное скрещивание", "Скрещивание смещением"])
+        
+        self.combo_box.currentIndexChanged.connect(self.on_combo_box_changed)
+        
+        layout.addWidget(self.combo_box)
+
+        self.combo_box_2 = QComboBox()
+        self.combo_box_2.addItems(["Вещественная мутация", "Мутация радиуса", "Мутация слиянием", "Мутация равномерным шумом", "Комбинированная мутация"])
+        
+        self.combo_box_2.currentIndexChanged.connect(self.on_combo_box_changed_2)
+        
+        layout.addWidget(self.combo_box_2)
 
         self.param_widgets = {}
         form = QFormLayout()
+        
         param_defs = {
             "num_points": (1, 50, 20),
             'num_generations': (1, 1000, 50),
             'crossover_rate': (0.0, 1.0, 0.7),
             'mutation_rate': (0.0, 1.0, 0.1),
-            'penalty_coeff': (0.0, 5.0, 1.0),
+            'mu' : (0.0, 10.0, 0.0),
             'sigma': (0.1, 20.0, 5.0),
             'delta': (1.0, 10.0, 2.0),
             'tournament_size': (1, 10, 3),
             "circles_count": (2, 20, 5),
-            "crossover_type": (0, 3, 0),
-            "mutation_type": (0, 4, 0),
+        }
+        param_descriptions = {
+            "num_points": "Количество точек (num_points)",
+            'num_generations': "Количество поколений (num_generations)",
+            'crossover_rate': "Вероятность скрещивания (crossover_rate)",
+            'mutation_rate': "Вероятность мутации (mutation_rate)",
+            'mu': "Среднее значение для мутации (mu)",
+            'sigma': "Стандартное отклонение для мутации (sigma)",
+            'delta': "Дельта для мутации (delta)",
+            'tournament_size': "Размер турнира (tournament_size)",
+            "circles_count": "Количество окружностей (circles_count)"
         }
 
         for key, (minv, maxv, default) in param_defs.items():
@@ -100,8 +126,8 @@ class GAWindow(QMainWindow):
             w.setRange(minv, maxv)
             w.setValue(default)
             self.param_widgets[key] = w
-            form.addRow(key, w)
-
+            form.addRow(param_descriptions.get(key, key), w)
+        
         layout.addLayout(form)
 
 
@@ -114,6 +140,12 @@ class GAWindow(QMainWindow):
         self.btn_clear.clicked.connect(self.reset_all)
         self.btn_clear.setStyleSheet("background-color: red; color: white; font-weight: bold;")
         layout.addWidget(self.btn_clear)
+
+    def on_combo_box_changed(self, index):
+        self.crossover_type = index 
+    
+    def on_combo_box_changed_2(self, index):
+        self.mutation_type = index
 
     def clear_circles_only(self):
         if hasattr(self, 'ga'):
@@ -136,8 +168,10 @@ class GAWindow(QMainWindow):
         self.param_widgets["num_points"].setValue(n)
 
     def get_params(self):
-        return {k: w.value() for k, w in self.param_widgets.items()}
-
+        params = {k: w.value() for k, w in self.param_widgets.items()}
+        params["crossover_type"] = self.crossover_type
+        params["mutation_type"] = self.mutation_type
+        return params
     def init_ga(self):
         if not hasattr(self, "points") or not self.points:
             self.generate_points()
