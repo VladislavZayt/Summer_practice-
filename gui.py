@@ -5,7 +5,7 @@ import math
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QPushButton, QLabel,
     QVBoxLayout, QHBoxLayout, QFormLayout, QSpinBox, QDoubleSpinBox,
-    QInputDialog, QFileDialog, QComboBox
+    QInputDialog, QFileDialog, QComboBox, QMessageBox
 )
 from PyQt5.QtCore import QTimer
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -55,6 +55,10 @@ class GAWindow(QMainWindow):
         self.btn_load_file.clicked.connect(self.load_points_from_file)
         layout.addWidget(self.btn_load_file)
 
+        self.btn_manual = QPushButton("Ввести точки вручную")
+        self.btn_manual.clicked.connect(self.input_points)
+        layout.addWidget(self.btn_manual)
+
         self.btn_init = QPushButton("Инициализация")
         self.btn_init.clicked.connect(self.init_ga)
         layout.addWidget(self.btn_init)
@@ -75,8 +79,9 @@ class GAWindow(QMainWindow):
         self.btn_step_through.clicked.connect(self.step_through_all)
         layout.addWidget(self.btn_step_through)
 
-        layout.addWidget(QLabel("Параметры:"))
+        #layout.addWidget(QLabel("Параметры:"))
 
+        layout.addWidget(QLabel("Тип скрещивания:"))
         self.combo_box = QComboBox()
         self.combo_box.addItems(["Одноточечное скрещивание", "Двухточечное скрещивание", "Равномерное скрещивание",
                                  "Скрещивание смещением"])
@@ -85,6 +90,7 @@ class GAWindow(QMainWindow):
 
         layout.addWidget(self.combo_box)
 
+        layout.addWidget(QLabel("Тип мутации:"))
         self.combo_box_2 = QComboBox()
         self.combo_box_2.addItems(
             ["Вещественная мутация", "Мутация радиуса", "Мутация слиянием", "Мутация равномерным шумом",
@@ -94,6 +100,7 @@ class GAWindow(QMainWindow):
 
         layout.addWidget(self.combo_box_2)
 
+        layout.addWidget(QLabel("Параметры:"))
         self.param_widgets = {}
         form = QFormLayout()
 
@@ -169,6 +176,42 @@ class GAWindow(QMainWindow):
         self.points = load_data(filename, n)
         self.canvas.set_points(self.points)
         self.param_widgets["num_points"].setValue(n)
+
+    def input_points(self):
+        if not hasattr(self, 'points'):
+            self.points = []
+
+        MAX_COORD = 1000000
+
+        while True:
+            text, ok = QInputDialog.getText(
+                self,
+                "Ввод точки",
+                "Введите координаты X Y или X,Y (оставьте пустым для завершения):"
+            )
+            if not ok or not text.strip():
+                break
+
+            try:
+                parts = text.replace(',', ' ').split()
+                if len(parts) != 2:
+                    raise ValueError("Нужно ввести две координаты.")
+
+                x, y = float(parts[0]), float(parts[1])
+                if abs(x) > MAX_COORD or abs(y) > MAX_COORD:
+                    raise ValueError(f"Координаты не должны превышать {MAX_COORD}.")
+
+                self.points.append((x, y))
+                self.canvas.set_points(self.points)
+                self.param_widgets["num_points"].setValue(len(self.points))
+
+            except ValueError as ve:
+                QMessageBox.warning(self, "Ошибка ввода", str(ve))
+            except Exception:
+                QMessageBox.warning(
+                    self, "Ошибка ввода",
+                    "Неверный формат. Введите как: 3.14 36.6 или 36.6,3.14"
+                )
 
     def get_params(self):
         params = {k: w.value() for k, w in self.param_widgets.items()}
@@ -347,7 +390,6 @@ class GAVisualizer(QWidget):
                         circ = Circle((x, y), r, fill=False, edgecolor='red')
                         ax_cov.add_patch(circ)
                 coverage_fig.savefig("coverage.png", dpi=150)
-
 
                 # правый график
                 fitness_fig = Figure()
