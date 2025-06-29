@@ -1,20 +1,27 @@
 import sys
+import copy
 import random
 import math
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QPushButton, QLabel,
-    QVBoxLayout, QHBoxLayout, QFormLayout, QSpinBox, QDoubleSpinBox
+    QVBoxLayout, QHBoxLayout, QFormLayout, QSpinBox, QDoubleSpinBox,
+    QInputDialog, QFileDialog, QComboBox
 )
 from PyQt5.QtCore import QTimer
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.patches import Circle
 from genetic_algorithm import GeneticAlgorithm
+from input import load_data
 
 
 class GAWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        import os
+        log_path = os.path.abspath("ga_log.txt")
+        self.log_file = open(log_path, "w", encoding="utf-8")
+
         self.setWindowTitle("Задача покрытия окружностями")
         self.setGeometry(100, 100, 1200, 600)
 
@@ -23,6 +30,8 @@ class GAWindow(QMainWindow):
         self.ga = None
         self.current_step = 0
         self.max_steps = 0
+        self.crossover_type = 0
+        self.mutation_type = 0
 
     def init_ui(self):
         main_widget = QWidget()
@@ -42,6 +51,10 @@ class GAWindow(QMainWindow):
         self.btn_generate.clicked.connect(self.generate_points)
         layout.addWidget(self.btn_generate)
 
+        self.btn_load_file = QPushButton("Загрузить точки из файла")
+        self.btn_load_file.clicked.connect(self.load_points_from_file)
+        layout.addWidget(self.btn_load_file)
+
         self.btn_init = QPushButton("Инициализация")
         self.btn_init.clicked.connect(self.init_ga)
         layout.addWidget(self.btn_init)
@@ -49,6 +62,10 @@ class GAWindow(QMainWindow):
         self.btn_step = QPushButton("Следующий шаг")
         self.btn_step.clicked.connect(self.step_ga)
         layout.addWidget(self.btn_step)
+
+        self.btn_back = QPushButton("Шаг назад")
+        self.btn_back.clicked.connect(self.step_back)
+        layout.addWidget(self.btn_back)
 
         self.btn_run = QPushButton("До конца")
         self.btn_run.clicked.connect(self.run_to_end)
@@ -60,20 +77,47 @@ class GAWindow(QMainWindow):
 
         layout.addWidget(QLabel("Параметры:"))
 
+        self.combo_box = QComboBox()
+        self.combo_box.addItems(["Одноточечное скрещивание", "Двухточечное скрещивание", "Равномерное скрещивание",
+                                 "Скрещивание смещением"])
+
+        self.combo_box.currentIndexChanged.connect(self.on_combo_box_changed)
+
+        layout.addWidget(self.combo_box)
+
+        self.combo_box_2 = QComboBox()
+        self.combo_box_2.addItems(
+            ["Вещественная мутация", "Мутация радиуса", "Мутация слиянием", "Мутация равномерным шумом",
+             "Комбинированная мутация"])
+
+        self.combo_box_2.currentIndexChanged.connect(self.on_combo_box_changed_2)
+
+        layout.addWidget(self.combo_box_2)
+
         self.param_widgets = {}
         form = QFormLayout()
+
         param_defs = {
             "num_points": (1, 50, 20),
             'num_generations': (1, 1000, 50),
             'crossover_rate': (0.0, 1.0, 0.7),
             'mutation_rate': (0.0, 1.0, 0.1),
-            'penalty_coeff': (0.0, 5.0, 1.0),
+            'mu': (0.0, 10.0, 0.0),
             'sigma': (0.1, 20.0, 5.0),
             'delta': (1.0, 10.0, 2.0),
             'tournament_size': (1, 10, 3),
             "circles_count": (2, 20, 5),
-            "crossover_type": (0, 3, 0),
-            "mutation_type": (0, 4, 0),
+        }
+        param_descriptions = {
+            "num_points": "Количество точек (num_points)",
+            'num_generations': "Количество поколений (num_generations)",
+            'crossover_rate': "Вероятность скрещивания (crossover_rate)",
+            'mutation_rate': "Вероятность мутации (mutation_rate)",
+            'mu': "Среднее значение для мутации (mu)",
+            'sigma': "Стандартное отклонение для мутации (sigma)",
+            'delta': "Дельта для мутации (delta)",
+            'tournament_size': "Размер турнира (tournament_size)",
+            "circles_count": "Количество окружностей (circles_count)"
         }
 
         for key, (minv, maxv, default) in param_defs.items():
@@ -86,7 +130,7 @@ class GAWindow(QMainWindow):
             w.setRange(minv, maxv)
             w.setValue(default)
             self.param_widgets[key] = w
-            form.addRow(key, w)
+            form.addRow(param_descriptions.get(key, key), w)
 
         layout.addLayout(form)
 
@@ -100,6 +144,12 @@ class GAWindow(QMainWindow):
         self.btn_clear.setStyleSheet("background-color: red; color: white; font-weight: bold;")
         layout.addWidget(self.btn_clear)
 
+    def on_combo_box_changed(self, index):
+        self.crossover_type = index
+
+    def on_combo_box_changed_2(self, index):
+        self.mutation_type = index
+
     def clear_circles_only(self):
         if hasattr(self, 'ga'):
             self.ga = None
@@ -111,31 +161,62 @@ class GAWindow(QMainWindow):
         self.points = [(random.uniform(0, 100), random.uniform(0, 100)) for _ in range(num_points)]
         self.canvas.set_points(self.points)
 
+    def load_points_from_file(self):
+        filename, _ = QFileDialog.getOpenFileName(self, "Выберите файл", "", "Text Files (*.txt);;All Files (*)")
+        if not filename:
+            return
+        n, _ = QInputDialog.getInt(self, " ", "Сколько точек загрузить?", min=1)
+        self.points = load_data(filename, n)
+        self.canvas.set_points(self.points)
+        self.param_widgets["num_points"].setValue(n)
 
     def get_params(self):
-        return {k: w.value() for k, w in self.param_widgets.items()}
+        params = {k: w.value() for k, w in self.param_widgets.items()}
+        params["crossover_type"] = self.crossover_type
+        params["mutation_type"] = self.mutation_type
+        return params
 
     def init_ga(self):
         if not hasattr(self, "points") or not self.points:
             self.generate_points()
         self.ga = GeneticAlgorithm(self.points, self.get_params())
         self.ga.initialize_population()
+        self.ga.history = [copy.deepcopy(self.ga.population)]
         self.canvas.set_ga(self.ga)
 
     def step_ga(self):
         if self.ga:
             self.ga.step()
+            self.ga.history.append(copy.deepcopy(self.ga.population))
             self.canvas.update_plot()
             gen = self.ga.current_generation
             best = self.ga.stats['best'][-1]
             avg = self.ga.stats['average'][-1]
-            print(f"Gen {gen}: Best = {best:.2f}, Avg = {avg:.2f}")
+            self.print_generation_stats()
 
     def run_to_end(self):
         if self.ga:
-            while self.ga.current_generation < self.ga.params['num_generations']:
-                self.ga.step()
+            try:
+                while self.ga.current_generation < self.ga.params['num_generations']:
+                    self.ga.step()
+                    self.ga.history.append(copy.deepcopy(self.ga.population))
+                self.canvas.update_plot()
+                self.print_generation_stats()
+                self.ga.save_best_solution("best_solution.txt")
+            except Exception as e:
+                print("Ошибка при выполнении до конца:", e)
+
+    def step_back(self):
+        if self.ga and self.ga.current_generation > 0 and len(self.ga.history) > 1:
+            self.ga.current_generation -= 1
+            self.ga.population = copy.deepcopy(self.ga.history[self.ga.current_generation])
+            self.ga.history = self.ga.history[:self.ga.current_generation + 1]
+            self.ga.evaluate_population()
             self.canvas.update_plot()
+            self.print_generation_stats()
+            print(f"Возврат к поколению {self.ga.current_generation}")
+        else:
+            print("Нельзя вернуться назад — это первое поколение")
 
     def step_through_all(self):
         if not self.ga:
@@ -154,14 +235,32 @@ class GAWindow(QMainWindow):
         gen = self.ga.current_generation
         best = self.ga.stats['best'][-1]
         avg = self.ga.stats['average'][-1]
-        print(f"Gen {gen}: Best = {best:.2f}, Avg = {avg:.2f}")
+        self.print_generation_stats()
+
         self.current_step += 1
         QTimer.singleShot(300, self.step_through_tick)
+
+    def print_generation_stats(self):
+        if self.ga:
+            gen = self.ga.current_generation
+            best = self.ga.stats['best'][-1]
+            avg = self.ga.stats['average'][-1]
+            log_line = f"Gen {gen}: Best = {best:.2f}, Avg = {avg:.2f}\nupdate_plot: start\nupdate_plot: end\n"
+            print(log_line, end="")
+            self.log_file.write(log_line)
+            self.log_file.flush()
 
     def reset_all(self):
         self.points = []
         self.ga = None
         self.canvas.reset(clear_points=True)
+
+    def closeEvent(self, event):
+        print("closeEvent called")
+        if hasattr(self, 'log_file') and not self.log_file.closed:
+            print("Closing log file")
+            self.log_file.close()
+        event.accept()
 
 
 class GAVisualizer(QWidget):
@@ -190,12 +289,15 @@ class GAVisualizer(QWidget):
             ax = self.figure.add_subplot(121)
             ax.set_title("Покрытие")
             ax.set_aspect('equal')
+            ax.set_xlabel("X координата")
+            ax.set_ylabel("Y координата")
+
             if self.points:
                 try:
                     xs, ys = zip(*self.points)
                     ax.scatter(xs, ys, color='black')
                 except Exception as e:
-                    print("Error plotting points:", e)
+                    print("Ошибка построения точек:", e)
 
             if self.ga and self.ga.population:
                 try:
@@ -204,33 +306,37 @@ class GAVisualizer(QWidget):
                         x, y, r = best[3 * i], best[3 * i + 1], best[3 * i + 2]
                         if not all(isinstance(v, (int, float)) and not math.isnan(v) and not math.isinf(v) for v in
                                    (x, y, r)):
-                            print("Invalid circle params:", x, y, r)
+                            print("Некорректные парамертры окружностей", x, y, r)
                             continue
                         if r < 0:
                             continue
                         circ = Circle((x, y), r, fill=False, edgecolor='red')
                         ax.add_patch(circ)
                 except Exception as e:
-                    print("Error plotting circles:", e)
+                    print("Ошибка построения окружностей:", e)
 
             ax2 = self.figure.add_subplot(122)
-            ax2.set_title("Fitness по поколениям")
+            ax2.set_title("Лучшее и среднее покрытие")
+            ax2.set_xlabel("Поколение")
+            ax2.set_ylabel("Fitness")
             if self.ga:
                 try:
                     ax2.plot(self.ga.stats['best'], label="Best")
                     ax2.plot(self.ga.stats['average'], label="Average")
                     ax2.legend()
                 except Exception as e:
-                    print("Error plotting fitness:", e)
+                    print("Ошибка построеня графика", e)
 
             try:
                 self.figure.savefig("full_plot.png", dpi=150)
 
-                # Левый график
+                # левый график
                 coverage_fig = Figure()
                 ax_cov = coverage_fig.add_subplot(111)
                 ax_cov.set_title("Покрытие")
                 ax_cov.set_aspect('equal')
+                ax_cov.set_xlabel("X")
+                ax_cov.set_ylabel("Y")
                 if self.points:
                     xs, ys = zip(*self.points)
                     ax_cov.scatter(xs, ys, color='black')
@@ -242,9 +348,12 @@ class GAVisualizer(QWidget):
                         ax_cov.add_patch(circ)
                 coverage_fig.savefig("coverage.png", dpi=150)
 
+                # правый график
                 fitness_fig = Figure()
                 ax_fit = fitness_fig.add_subplot(111)
-                ax_fit.set_title("Fitness by generation")
+                ax_fit.set_title("Fitness по поколениям")
+                ax_fit.set_xlabel("Поколение")
+                ax_fit.set_ylabel("Fitness")
                 if self.ga:
                     ax_fit.plot(self.ga.stats['best'], label="Best")
                     ax_fit.plot(self.ga.stats['average'], label="Average")
@@ -252,11 +361,11 @@ class GAVisualizer(QWidget):
                 fitness_fig.savefig("fitness.png", dpi=150)
 
             except Exception as e:
-                print("Error while saving figures:", e)
+                print("Ошибка при сохранении графиков:", e)
 
             self.canvas.draw()
         except Exception as e:
-            print("Exception in update_plot outer:", e)
+            print("Ошибка изменения графиков:", e)
         print("update_plot: end")
 
     def reset(self, clear_points=False):
