@@ -348,6 +348,7 @@ class GAVisualizer(QWidget):
                         ax_cov.add_patch(circ)
                 coverage_fig.savefig("coverage.png", dpi=150)
 
+
                 # правый график
                 fitness_fig = Figure()
                 ax_fit = fitness_fig.add_subplot(111)
