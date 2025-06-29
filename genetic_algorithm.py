@@ -7,7 +7,7 @@ class GeneticAlgorithm:
         self.M = self.params.get('circles_count')  # число окружностей
         self.bounding_box = self._compute_bounding_box(points)
         self.population = []  # список особей: каждая особь — list длины 3*M
-        self.history = [] 
+        self.history = []
         self.current_generation = 0
         self.attempts_limit = 1000
         self.pop_size = 50
@@ -70,7 +70,7 @@ class GeneticAlgorithm:
                     created = True
                     break
             if not created:
-                print(f"Warning: не удалось сгенерировать валидную особь #{idx+1} за {attempts_limit} попыток.")
+                print(f"Warning: не удалось сгенерировать валидную особь #{idx + 1} за {attempts_limit} попыток.")
         if len(self.population) < pop_size and self.population:
             needed = pop_size - len(self.population)
             best = max(self.population, key=self._fitness_no_penalty)
@@ -82,7 +82,6 @@ class GeneticAlgorithm:
         self.history = [list(self.population)]
         self.stats = {'best': [], 'average': []}
         self.current_fitness = self.evaluate_population()
-
 
     def evaluate_population(self):
         fitness_values = []
@@ -119,7 +118,7 @@ class GeneticAlgorithm:
         indices = random.sample(range(pop_len), k)
         best_idx = max(indices, key=lambda i: self.current_fitness[i])
         return self.population[best_idx].copy()
-    
+
     def crossover(self, p1, p2, type_flag):
         """
         Функция скрещевания
@@ -128,19 +127,20 @@ class GeneticAlgorithm:
         type_flag == 2 => Равномерное скрещивание
         type_flag == 3 => Скрещивание смешением
         """
+
         def make_children_one_point(pt1, pt2, point):
             child1 = pt1[:point] + pt2[point:]
             child2 = pt2[:point] + pt1[point:]
             return child1, child2
-    
-        def make_children_two_points(pt1, pt2, point, point2):           
+
+        def make_children_two_points(pt1, pt2, point, point2):
             child1 = pt1[:point] + pt2[point:point2] + pt1[point2:]
             child2 = pt2[:point] + pt1[point:point2] + pt2[point2:]
             return child1, child2
 
         def make_children_uniform(pt1, pt2):
             child1 = []
-            child2 = [] 
+            child2 = []
             for i in range(0, len(pt1)):
                 select_chance = random.randint(0, 1)
                 if select_chance == 1:
@@ -169,7 +169,7 @@ class GeneticAlgorithm:
         max_tries = self.crossover_tries
         # Функция для попытки кроссовера один раз:
         for _ in range(max_tries):
-                # Выбираем точку скрещивания: между окружностями
+            # Выбираем точку скрещивания: между окружностями
             if type_flag == 0:
                 cut_idx = random.randint(1, self.M - 1) * 3
                 child1, child2 = make_children_one_point(p1, p2, cut_idx)
@@ -196,7 +196,7 @@ class GeneticAlgorithm:
                 return child1, child2
                 # Если один из детей валиден, другой нет, можно делать: возвращать одного ребёнка + копию родителя
             if ok1 and not ok2:
-                    # child1 валиден, child2 нет
+                # child1 валиден, child2 нет
                 return child1, p1.copy()
             if ok2 and not ok1:
                 return child2, p2.copy()
@@ -209,13 +209,13 @@ class GeneticAlgorithm:
         Функция мутированния
         type_flag == 0 => Вещественная мутация
         type_flag == 1 => Мутация радиуса
-        type_flag == 2 => Мутация слиянием 
-        type_flag == 3 => Мутация равномерным шумом 
+        type_flag == 2 => Мутация слиянием
+        type_flag == 3 => Мутация равномерным шумом
         type_flag == 4 => Комбинированная мутация (Гауссовский шум для координат центра, равномерный для радиуса)
         Если после мутирования окружности пересекаются, возвращается исходное состояние.
         """
         original = individual.copy()
-        
+
         def real_mutation(individual):
             xmin, xmax, ymin, ymax = self.bounding_box
             changed = False
@@ -247,41 +247,48 @@ class GeneticAlgorithm:
         def distance(circle_1, circle_2):
             x1, y1, r1 = circle_1
             x2, y2, r2 = circle_2
-    
+
             dx = x2 - x1
             dy = y2 - y1
-            centers_distance = (dx**2 + dy**2)**0.5
-    
+            centers_distance = (dx ** 2 + dy ** 2) ** 0.5
+
             circle_distance = centers_distance - r1 - r2
             return max(0, circle_distance)
+
         def merge_mutation(individual):
             changed = False
             if random.random() < self.params.get('mutation_rate', 0.1):
                 best_pair = (0, 1)
                 min_dist = 100000000000000000
                 for i in range(self.M):
-                    for j in range(i+1, self.M):
-                        dist = distance(individual[3*i:3*i+3], individual[3*j:3*j+3])
+                    for j in range(i + 1, self.M):
+                        dist = distance(individual[3 * i:3 * i + 3], individual[3 * j:3 * j + 3])
                         if dist < min_dist:
                             min_dist = dist
                             best_pair = (i, j)
-    
+
                 i, j = best_pair
                 # Заменяем одну окружность на среднюю, другую - на случайную
                 xmin, xmax, ymin, ymax = self.bounding_box
-                individual[3*i:3*i+3] = [(individual[3*i]+individual[3*j])/2, (individual[3*i+1]+individual[3*j+1])/2, max(individual[3*i+2], individual[3*j+2])*1.1]
-                individual[3*j:3*j+3] = [random.uniform(xmin, xmax), random.uniform(ymin, ymax), random.uniform(self.r_min, self.r_max)]
+                individual[3 * i:3 * i + 3] = [(individual[3 * i] + individual[3 * j]) / 2,
+                                               (individual[3 * i + 1] + individual[3 * j + 1]) / 2,
+                                               max(individual[3 * i + 2], individual[3 * j + 2]) * 1.1]
+                individual[3 * j:3 * j + 3] = [random.uniform(xmin, xmax), random.uniform(ymin, ymax),
+                                               random.uniform(self.r_min, self.r_max)]
                 changed = True
             return individual, changed
-        
+
         def uniform_mutation(individual):
             xmin, xmax, ymin, ymax = self.bounding_box
             changed = False
             for i in range(self.M):
                 if random.random() < self.params.get('mutation_rate', 0.1):
-                    xi = individual[3 * i] + random.uniform(-self.params.get('delta', 2.0), self.params.get('delta', 2.0))
-                    yi = individual[3 * i + 1] + random.uniform(-self.params.get('delta', 2.0), self.params.get('delta', 2.0))
-                    ri = individual[3 * i + 2] + random.uniform(-self.params.get('delta', 2.0), self.params.get('delta', 2.0))
+                    xi = individual[3 * i] + random.uniform(-self.params.get('delta', 2.0),
+                                                            self.params.get('delta', 2.0))
+                    yi = individual[3 * i + 1] + random.uniform(-self.params.get('delta', 2.0),
+                                                                self.params.get('delta', 2.0))
+                    ri = individual[3 * i + 2] + random.uniform(-self.params.get('delta', 2.0),
+                                                                self.params.get('delta', 2.0))
                     xi = min(max(xi, xmin), xmax)
                     yi = min(max(yi, ymin), ymax)
                     ri = min(max(ri, self.r_min), self.r_max)
@@ -290,6 +297,7 @@ class GeneticAlgorithm:
                     individual[3 * i + 2] = ri
                     changed = True
             return individual, changed
+
         def combine_mutation(individual):
             xmin, xmax, ymin, ymax = self.bounding_box
             changed = False
@@ -297,7 +305,8 @@ class GeneticAlgorithm:
                 if random.random() < self.params.get('mutation_rate', 0.1):
                     xi = individual[3 * i] + random.gauss(self.params.get('mu', 0.0), self.params.get('sigma', 1.0))
                     yi = individual[3 * i + 1] + random.gauss(self.params.get('mu', 0.0), self.params.get('sigma', 1.0))
-                    ri = individual[3 * i + 2] + random.uniform(-self.params.get('delta', 2.0), self.params.get('delta', 2.0))
+                    ri = individual[3 * i + 2] + random.uniform(-self.params.get('delta', 2.0),
+                                                                self.params.get('delta', 2.0))
                     xi = min(max(xi, xmin), xmax)
                     yi = min(max(yi, ymin), ymax)
                     ri = min(max(ri, self.r_min), self.r_max)
@@ -325,9 +334,6 @@ class GeneticAlgorithm:
                 individual[:] = original[:]
 
     def step(self):
-        # Оценка текущего поколения
-        self.current_fitness = self.evaluate_population()
-
         new_population = []
         pop_size = self.pop_size
 
@@ -339,11 +345,13 @@ class GeneticAlgorithm:
         while len(new_population) < pop_size:
             parent1 = self.select()
             parent2 = self.select()
+
             # Кроссовер
             if random.random() < self.params.get('crossover_rate', 0.7):
                 child1, child2 = self.crossover(parent1, parent2, self.crossover_type)
             else:
                 child1, child2 = parent1.copy(), parent2.copy()
+
             # Мутация
             self.mutate(child1, self.mutation_type)
             if len(new_population) < pop_size:
@@ -366,7 +374,7 @@ class GeneticAlgorithm:
 
     def reset(self):
         self.initialize_population()
-    
+
     def save_best_solution(self, filename="best_solution.txt"):
         indx = self.current_fitness.index(max(self.current_fitness))
         best_solution = self.population[indx]
