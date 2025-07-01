@@ -11,7 +11,7 @@ from PyQt5.QtCore import QTimer
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.patches import Circle
-from genetic_algorithm import GeneticAlgorithm
+from genetic_algorithm_penalty import GeneticAlgorithm
 from input import load_data
 
 
@@ -346,9 +346,9 @@ class GAWindow(QMainWindow):
         self.canvas.reset(clear_points=True)
 
     def closeEvent(self, event):
-        # print("closeEvent called")
+        if self.canvas:
+            self.canvas.save_plots()
         if hasattr(self, 'log_file') and not self.log_file.closed:
-            # print("Closing log file")
             self.log_file.close()
         event.accept()
 
@@ -356,7 +356,7 @@ class GAWindow(QMainWindow):
 class GAVisualizer(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.figure = Figure(figsize=(10, 8))
+        self.figure = Figure(figsize=(7, 5))
         self.canvas = FigureCanvas(self.figure)
         layout = QVBoxLayout()
         layout.addWidget(self.canvas)
@@ -376,67 +376,109 @@ class GAVisualizer(QWidget):
         print("update_plot: start")
         try:
             self.figure.clear()
-
             import matplotlib.gridspec as gridspec
-            gs = self.figure.add_gridspec(2, 1, height_ratios=[1, 2])
+            #gs = self.figure.add_gridspec(2, 1, height_ratios=[1, 2])
+            gs = self.figure.add_gridspec(2, 1, height_ratios=[1, 2], hspace=0.5)
 
             # верхний график
-            ax_fitness = self.figure.add_subplot(gs[0])
-            ax_fitness.set_title("Лучшее и среднее покрытие", fontsize=14)
-            ax_fitness.set_xlabel("Поколение", fontsize=16)
-            ax_fitness.set_ylabel("Fitness", fontsize=16)
-            ax_fitness.tick_params(axis='both', labelsize=14)
+            self.ax_fitness = self.figure.add_subplot(gs[0])
+            self.ax_fitness.set_title("Лучшее и среднее покрытие", fontsize=14)
+            self.ax_fitness.set_xlabel("Поколение", fontsize=14)
+            self.ax_fitness.set_ylabel("Fitness", fontsize=14)
+            self.ax_fitness.tick_params(axis='both', labelsize=12)
 
             if self.ga:
                 try:
                     best = self.ga.stats['best']
                     avg = self.ga.stats['average']
-                    ax_fitness.plot(best, label="Best")
-                    ax_fitness.plot(avg, label="Average")
-                    ax_fitness.legend(fontsize=14)
-
-                    # Сплющить график
+                    self.ax_fitness.plot(best, label="Best")
+                    self.ax_fitness.plot(avg, label="Average")
+                    self.ax_fitness.legend(fontsize=14)
                     max_y = max(max(best), max(avg)) if best and avg else 1
-                    ax_fitness.set_ylim(0, max_y * 1.2)
-
+                    self.ax_fitness.set_ylim(0, max_y * 1.2)
                 except Exception as e:
                     print("Ошибка построения графика fitness:", e)
 
             # нижний график
-            ax_cov = self.figure.add_subplot(gs[1])
-            ax_cov.set_title("Покрытие", fontsize=16)
-            ax_cov.set_xlabel("X координата", fontsize=16)
-            ax_cov.set_ylabel("Y координата", fontsize=16)
-            ax_cov.tick_params(axis='both', labelsize=14)
-            ax_cov.set_aspect('equal')
+            self.ax_cov = self.figure.add_subplot(gs[1])
+            self.ax_cov.set_title("Покрытие", fontsize=14)
+            self.ax_cov.set_xlabel("X координата", fontsize=14)
+            self.ax_cov.set_ylabel("Y координата", fontsize=14)
+            self.ax_cov.tick_params(axis='both', labelsize=12)
+            self.ax_cov.set_aspect('equal')
 
             if self.points:
                 try:
                     xs, ys = zip(*self.points)
-                    ax_cov.scatter(xs, ys, color='black')
+                    self.ax_cov.scatter(xs, ys, color='black')
                 except Exception as e:
                     print("Ошибка построения точек:", e)
 
             if self.ga and self.ga.population:
                 try:
-                    best = max(self.ga.population, key=self.ga._fitness_no_penalty)
+                    best = max(self.ga.population, key=self.ga._fitness_with_penalty)
                     for i in range(self.ga.M):
                         x, y, r = best[3 * i], best[3 * i + 1], best[3 * i + 2]
-                        if not all(isinstance(v, (int, float)) and not math.isnan(v) and not math.isinf(v) for v in
-                                   (x, y, r)):
+                        if not all(isinstance(v, (int, float)) and not math.isnan(v) and not math.isinf(v)
+                                   for v in (x, y, r)):
                             print("Некорректные параметры окружностей:", x, y, r)
                             continue
                         if r < 0:
                             continue
                         circ = Circle((x, y), r, fill=False, edgecolor='red')
-                        ax_cov.add_patch(circ)
+                        self.ax_cov.add_patch(circ)
                 except Exception as e:
                     print("Ошибка построения окружностей:", e)
 
+            #self.figure.tight_layout(pad=3.0)
             self.canvas.draw()
         except Exception as e:
             print("Ошибка изменения графиков:", e)
         print("update_plot: end")
+    
+
+    def save_plots(self):
+        try:
+            if hasattr(self, 'ax_fitness') and hasattr(self, 'ax_cov'):
+                fig_fitness = Figure(figsize=(8, 6))
+                ax1 = fig_fitness.add_subplot(111)
+                best = self.ga.stats['best']
+                avg = self.ga.stats['average']
+                ax1.plot(best, label="Best")
+                ax1.plot(avg, label="Average")
+                ax1.set_title("Лучшее и среднее покрытие", fontsize=12)
+                ax1.set_xlabel("Поколение", fontsize=12)
+                ax1.set_ylabel("Fitness", fontsize=12)
+                ax1.legend(fontsize=10)
+                fig_fitness.tight_layout()
+                fig_fitness.savefig("fitness_plot.png")
+
+
+                fig_cov = Figure(figsize=(8, 8))
+                ax2 = fig_cov.add_subplot(111)
+                if self.points:
+                    xs, ys = zip(*self.points)
+                    ax2.scatter(xs, ys, color='black')
+
+                if self.ga and self.ga.population:
+                    best = max(self.ga.population, key=self.ga._fitness_with_penalty)
+                    for i in range(self.ga.M):
+                        x, y, r = best[3 * i], best[3 * i + 1], best[3 * i + 2]
+                        if r >= 0:
+                            circ = Circle((x, y), r, fill=False, edgecolor='red')
+                            ax2.add_patch(circ)
+                ax2.set_title("Покрытие", fontsize=12)
+                ax2.set_xlabel("X координата", fontsize=12)
+                ax2.set_ylabel("Y координата", fontsize=12)
+                ax2.set_aspect('equal')
+                fig_cov.tight_layout()
+                fig_cov.savefig("coverage_plot.png")
+
+                self.figure.savefig("full_figure.png")
+
+                print("Графики сохранены.")
+        except Exception as e:
+            print(f"Ошибка при сохранении графиков: {e}")
 
     def reset(self, clear_points=False):
         if clear_points:
