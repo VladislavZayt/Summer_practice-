@@ -152,16 +152,28 @@ class GeneticAlgorithm:
         def make_childeren_bias(pt1, pt2, alpha=0.5):
             child1 = []
             child2 = []
+            xmin, xmax, ymin, ymax = self.bounding_box
+            
             for i in range(0, len(pt1)):
                 min_val = min(pt1[i], pt2[i])
                 max_val = max(pt1[i], pt2[i])
-
-                lower_bound = min_val - alpha * (max_val - min_val)
-                upper_bound = max_val + alpha * (max_val - min_val)
-
+                if i % 3 == 0: 
+                    lower_bound = max(min_val - alpha * (max_val - min_val), xmin)
+                    upper_bound = min(max_val + alpha * (max_val - min_val), xmax)
+                elif i % 3 == 1:
+                    lower_bound = max(min_val - alpha * (max_val - min_val), ymin)
+                    upper_bound = min(max_val + alpha * (max_val - min_val), ymax)
+                else: 
+                    x = (pt1[i-2] + pt2[i-2]) / 2  
+                    y = (pt1[i-1] + pt2[i-1]) / 2  
+                    max_possible_r = min(xmax-x, x-xmin, ymax-y, y-ymin, self.r_max)
+                    
+                    lower_bound = max(min_val - alpha * (max_val - min_val), self.r_min)
+                    upper_bound = min(max_val + alpha * (max_val - min_val), max_possible_r)
+                
                 child1.append(random.uniform(lower_bound, upper_bound))
                 child2.append(random.uniform(lower_bound, upper_bound))
-
+            
             return child1, child2
 
         max_tries = self.crossover_tries
