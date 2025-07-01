@@ -96,7 +96,6 @@ class GAWindow(QMainWindow):
         form = QFormLayout()
 
         param_defs = {
-            # "num_points": (1, 50, 20),
             'num_generations': (1, 1000, 50),
             'crossover_rate': (0.0, 1.0, 0.7),
             'mutation_rate': (0.0, 1.0, 0.1),
@@ -107,7 +106,6 @@ class GAWindow(QMainWindow):
             "circles_count": (2, 20, 5),
         }
         param_descriptions = {
-            # "num_points": "Количество точек (num_points)",
             'num_generations': "Количество поколений (num_generations)",
             'crossover_rate': "Вероятность скрещивания (crossover_rate)",
             'mutation_rate': "Вероятность мутации (mutation_rate)",
@@ -180,15 +178,6 @@ class GAWindow(QMainWindow):
         self.points = [(random.uniform(0, 100), random.uniform(0, 100)) for _ in range(num_points)]
         self.canvas.set_points(self.points)
 
-    '''
-    def generate_points(self):
-        params = self.get_params()
-        num_points = params['num_points']
-        self.points = [(random.uniform(0, 100), random.uniform(0, 100)) for _ in range(num_points)]
-        self.canvas.set_points(self.points)
-
-    '''
-
     def load_points_from_file(self):
         filename, _ = QFileDialog.getOpenFileName(self, "Выберите файл", "", "Text Files (*.txt);;All Files (*)")
         if not filename:
@@ -240,17 +229,6 @@ class GAWindow(QMainWindow):
         params["mutation_type"] = self.mutation_type
         return params
 
-    '''
-    def init_ga(self):
-        if not hasattr(self, "points") or not self.points:
-            self.generate_points()
-        self.ga = GeneticAlgorithm(self.points, self.get_params())
-        self.ga.initialize_population()
-        self.ga.history = [copy.deepcopy(self.ga.population)]
-        self.canvas.set_ga(self.ga)
-
-    '''
-
     def init_ga(self):
         if not hasattr(self, "points") or not self.points:
             self.generate_points()
@@ -275,10 +253,6 @@ class GAWindow(QMainWindow):
 
     def step_ga(self):
         if self.ga:
-            # max_gen = self.ga.params.get('num_generations', 50)
-            # if self.ga.current_generation >= max_gen:
-            # QMessageBox.information(self, "Информация", f"Достигнуто максимальное число поколений: {max_gen}")
-            # return
             self.ga.step()
             self.ga.history.append(copy.deepcopy(self.ga.population))
             self.canvas.update_plot()
@@ -377,7 +351,6 @@ class GAVisualizer(QWidget):
         try:
             self.figure.clear()
             import matplotlib.gridspec as gridspec
-            #gs = self.figure.add_gridspec(2, 1, height_ratios=[1, 2])
             gs = self.figure.add_gridspec(2, 1, height_ratios=[1, 2], hspace=0.5)
 
             # верхний график
@@ -430,7 +403,6 @@ class GAVisualizer(QWidget):
                 except Exception as e:
                     print("Ошибка построения окружностей:", e)
 
-            #self.figure.tight_layout(pad=3.0)
             self.canvas.draw()
         except Exception as e:
             print("Ошибка изменения графиков:", e)

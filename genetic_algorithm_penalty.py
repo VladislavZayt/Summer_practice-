@@ -9,7 +9,6 @@ class GeneticAlgorithm:
         self.population = []  # список особей: каждая особь — list длины 3*M
         self.history = []
         self.current_generation = 0
-        self.attempts_limit = 1000
         self.pop_size = 50
         self.r_min = 1.0
         self.r_max = 30.0
@@ -18,7 +17,7 @@ class GeneticAlgorithm:
         self.current_fitness = []
         self.crossover_type = self.params.get('crossover_type')
         self.mutation_type = self.params.get('mutation_type')
-        self.penalty_coeff = 5.0 #/ self.M
+        self.penalty_coeff = 5.0 
 
     def _compute_bounding_box(self, points):
         xs = [p[0] for p in points]
@@ -58,10 +57,7 @@ class GeneticAlgorithm:
     
 
     def initialize_population(self):
-        """
-        Генерирует популяцию из pop_size особей, каждая с M непересекающимися окружностями
-        Если не удаётся за attempts_limit попыток для очередной особи, выдаём предупреждение
-        """
+
         self.population = []
         xmin, xmax, ymin, ymax = self.bounding_box
 
@@ -213,7 +209,6 @@ class GeneticAlgorithm:
 
         def real_mutation(individual):
             xmin, xmax, ymin, ymax = self.bounding_box
-            changed = False
             for i in range(self.M):
                 if random.random() < self.params.get('mutation_rate', 0.1):
                     # Добавление шума и корректировка, чтобы центр оставался в bounding_box, радиус оставался в [r_min, r_max]
@@ -226,18 +221,15 @@ class GeneticAlgorithm:
                     individual[3 * i] = xi
                     individual[3 * i + 1] = yi
                     individual[3 * i + 2] = ri
-                    changed = True
-            return individual, changed
+            return individual
 
         def radius_mutation(individual):
-            changed = False
             for i in range(self.M):
                 if random.random() < self.params.get('mutation_rate', 0.1):
                     ri = individual[3 * i + 2] + random.gauss(self.params.get('mu', 0.0), self.params.get('sigma', 1.0))
                     ri = min(max(ri, self.r_min), self.r_max)
                     individual[3 * i + 2] = ri
-                    changed = True
-            return individual, changed
+            return individual
 
         def distance(circle_1, circle_2):
             x1, y1, r1 = circle_1
@@ -251,7 +243,6 @@ class GeneticAlgorithm:
             return max(0, circle_distance)
 
         def merge_mutation(individual):
-            changed = False
             if random.random() < self.params.get('mutation_rate', 0.1):
                 best_pair = (0, 1)
                 min_dist = 100000000000000000
@@ -270,12 +261,10 @@ class GeneticAlgorithm:
                                                max(individual[3 * i + 2], individual[3 * j + 2]) * 1.1]
                 individual[3 * j:3 * j + 3] = [random.uniform(xmin, xmax), random.uniform(ymin, ymax),
                                                random.uniform(self.r_min, self.r_max)]
-                changed = True
-            return individual, changed
+            return individual
 
         def uniform_mutation(individual):
             xmin, xmax, ymin, ymax = self.bounding_box
-            changed = False
             for i in range(self.M):
                 if random.random() < self.params.get('mutation_rate', 0.1):
                     xi = individual[3 * i] + random.uniform(-self.params.get('delta', 2.0),
@@ -290,12 +279,10 @@ class GeneticAlgorithm:
                     individual[3 * i] = xi
                     individual[3 * i + 1] = yi
                     individual[3 * i + 2] = ri
-                    changed = True
-            return individual, changed
+            return individual
 
         def combine_mutation(individual):
             xmin, xmax, ymin, ymax = self.bounding_box
-            changed = False
             for i in range(self.M):
                 if random.random() < self.params.get('mutation_rate', 0.1):
                     xi = individual[3 * i] + random.gauss(self.params.get('mu', 0.0), self.params.get('sigma', 1.0))
@@ -308,21 +295,20 @@ class GeneticAlgorithm:
                     individual[3 * i] = xi
                     individual[3 * i + 1] = yi
                     individual[3 * i + 2] = ri
-                    changed = True
-            return individual, changed
+            return individual
 
         if type_flag == 0:
-            individual, changed = real_mutation(individual)
+            individual = real_mutation(individual)
 
         if type_flag == 1:
-            individual, changed = radius_mutation(individual)
+            individual = radius_mutation(individual)
 
         if type_flag == 2:
-            individual, changed = merge_mutation(individual)
+            individual = merge_mutation(individual)
         if type_flag == 3:
-            individual, changed = uniform_mutation(individual)
+            individual = uniform_mutation(individual)
         if type_flag == 4:
-            individual, changed = combine_mutation(individual)
+            individual = combine_mutation(individual)
 
     def step(self):
         new_population = []
