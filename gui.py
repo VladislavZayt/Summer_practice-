@@ -11,7 +11,7 @@ from PyQt5.QtCore import QTimer
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.patches import Circle
-from genetic_algorithm_penalty import GeneticAlgorithm
+from ga_p import GeneticAlgorithm
 from input import load_data
 
 
@@ -96,6 +96,7 @@ class GAWindow(QMainWindow):
         form = QFormLayout()
 
         param_defs = {
+            # "num_points": (1, 50, 20),
             'num_generations': (1, 1000, 50),
             'crossover_rate': (0.0, 1.0, 0.7),
             'mutation_rate': (0.0, 1.0, 0.1),
@@ -106,6 +107,7 @@ class GAWindow(QMainWindow):
             "circles_count": (2, 20, 5),
         }
         param_descriptions = {
+            # "num_points": "Количество точек (num_points)",
             'num_generations': "Количество поколений (num_generations)",
             'crossover_rate': "Вероятность скрещивания (crossover_rate)",
             'mutation_rate': "Вероятность мутации (mutation_rate)",
@@ -172,11 +174,21 @@ class GAWindow(QMainWindow):
             self.canvas.reset()
 
     def generate_points(self):
-        num_points, ok = QInputDialog.getInt(self, "Генерация точек", "Введите количество точек:", min=2, max=200)
+        num_points, ok = QInputDialog.getInt(self, "Генерация точек", "Введите количество точек:", min=2, max=200,
+                                             value=20)
         if not ok:
             return
         self.points = [(random.uniform(0, 100), random.uniform(0, 100)) for _ in range(num_points)]
         self.canvas.set_points(self.points)
+
+    '''
+    def generate_points(self):
+        params = self.get_params()
+        num_points = params['num_points']
+        self.points = [(random.uniform(0, 100), random.uniform(0, 100)) for _ in range(num_points)]
+        self.canvas.set_points(self.points)
+
+    '''
 
     def load_points_from_file(self):
         filename, _ = QFileDialog.getOpenFileName(self, "Выберите файл", "", "Text Files (*.txt);;All Files (*)")
@@ -229,10 +241,28 @@ class GAWindow(QMainWindow):
         params["mutation_type"] = self.mutation_type
         return params
 
+    '''
     def init_ga(self):
         if not hasattr(self, "points") or not self.points:
             self.generate_points()
-        params = self.get_params()
+        self.ga = GeneticAlgorithm(self.points, self.get_params())
+        self.ga.initialize_population()
+        self.ga.history = [copy.deepcopy(self.ga.population)]
+        self.canvas.set_ga(self.ga)
+
+    '''
+
+    def init_ga(self):
+        if not hasattr(self, "points") or not self.points:
+            self.generate_points()
+            if not hasattr(self, "points") or not self.points:
+                QMessageBox.warning(self, "Ошибка", "Точки не заданы — инициализация невозможна.")
+                return
+        try:
+            params = self.get_params()
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка параметров", str(e))
+            return
 
         if params["circles_count"] > len(self.points):
             suggested = max(1, len(self.points))
@@ -245,14 +275,20 @@ class GAWindow(QMainWindow):
             self.param_widgets["circles_count"].setValue(suggested)
             params["circles_count"] = suggested
 
-        self.ga = GeneticAlgorithm(self.points, params)
-        self.ga.initialize_population()
-
-        self.ga.history = [copy.deepcopy(self.ga.population)]
-        self.canvas.set_ga(self.ga)
+        try:
+            self.ga = GeneticAlgorithm(self.points, params)
+            self.ga.initialize_population()
+            self.ga.history = [copy.deepcopy(self.ga.population)]
+            self.canvas.set_ga(self.ga)
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка инициализации ГА", str(e))
 
     def step_ga(self):
         if self.ga:
+            # max_gen = self.ga.params.get('num_generations', 50)
+            # if self.ga.current_generation >= max_gen:
+            # QMessageBox.information(self, "Информация", f"Достигнуто максимальное число поколений: {max_gen}")
+            # return
             self.ga.step()
             self.ga.history.append(copy.deepcopy(self.ga.population))
             self.canvas.update_plot()
@@ -330,7 +366,7 @@ class GAWindow(QMainWindow):
 class GAVisualizer(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.figure = Figure(figsize=(7, 5))
+        self.figure = Figure(figsize=(10, 8))
         self.canvas = FigureCanvas(self.figure)
         layout = QVBoxLayout()
         layout.addWidget(self.canvas)
@@ -351,6 +387,7 @@ class GAVisualizer(QWidget):
         try:
             self.figure.clear()
             import matplotlib.gridspec as gridspec
+            # gs = self.figure.add_gridspec(2, 1, height_ratios=[1, 2])
             gs = self.figure.add_gridspec(2, 1, height_ratios=[1, 2], hspace=0.5)
 
             # верхний график
@@ -403,11 +440,11 @@ class GAVisualizer(QWidget):
                 except Exception as e:
                     print("Ошибка построения окружностей:", e)
 
+            # self.figure.tight_layout(pad=3.0)
             self.canvas.draw()
         except Exception as e:
             print("Ошибка изменения графиков:", e)
         print("update_plot: end")
-    
 
     def save_plots(self):
         try:
@@ -424,7 +461,6 @@ class GAVisualizer(QWidget):
                 ax1.legend(fontsize=10)
                 fig_fitness.tight_layout()
                 fig_fitness.savefig("fitness_plot.png")
-
 
                 fig_cov = Figure(figsize=(8, 8))
                 ax2 = fig_cov.add_subplot(111)
