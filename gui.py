@@ -370,7 +370,7 @@ class GAWindow(QMainWindow):
 class GAVisualizer(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.figure = Figure(figsize=(10, 8))
+        self.figure = Figure(figsize=(12, 10))
         self.canvas = FigureCanvas(self.figure)
         layout = QVBoxLayout()
         layout.addWidget(self.canvas)
@@ -391,10 +391,8 @@ class GAVisualizer(QWidget):
         try:
             self.figure.clear()
             import matplotlib.gridspec as gridspec
-            # gs = self.figure.add_gridspec(2, 1, height_ratios=[1, 2])
             gs = self.figure.add_gridspec(2, 1, height_ratios=[1, 2], hspace=0.5)
 
-            # верхний график
             self.ax_fitness = self.figure.add_subplot(gs[0])
             self.ax_fitness.set_title("Лучшее и среднее покрытие", fontsize=14)
             self.ax_fitness.set_xlabel("Поколение", fontsize=14)
@@ -413,7 +411,6 @@ class GAVisualizer(QWidget):
                 except Exception as e:
                     print("Ошибка построения графика fitness:", e)
 
-            # нижний график
             self.ax_cov = self.figure.add_subplot(gs[1])
             self.ax_cov.set_title("Покрытие", fontsize=14)
             self.ax_cov.set_xlabel("X координата", fontsize=14)
@@ -424,6 +421,16 @@ class GAVisualizer(QWidget):
             if self.points:
                 try:
                     xs, ys = zip(*self.points)
+                    min_x, max_x = min(xs), max(xs)
+                    min_y, max_y = min(ys), max(ys)
+                    x_range = max_x - min_x
+                    y_range = max_y - min_y
+                    padding_x = x_range * 0.3 if x_range > 0 else 15
+                    padding_y = y_range * 0.2 if y_range > 0 else 10
+                    plot_width = max_x - min_x + 2 * padding_x
+                    plot_height = max_y - min_y + 2 * padding_y
+                    self.ax_cov.set_xlim(min_x - padding_x, min_x + plot_width)
+                    self.ax_cov.set_ylim(min_y - padding_y, min_y + plot_height)
                     self.ax_cov.scatter(xs, ys, color='black')
                 except Exception as e:
                     print("Ошибка построения точек:", e)
@@ -439,12 +446,18 @@ class GAVisualizer(QWidget):
                             continue
                         if r < 0:
                             continue
-                        circ = Circle((x, y), r, fill=False, edgecolor='red')
+                        plot_x_min, plot_x_max = self.ax_cov.get_xlim()
+                        plot_y_min, plot_y_max = self.ax_cov.get_ylim()
+                        max_r_x = min(abs(x - plot_x_min), abs(x - plot_x_max))
+                        max_r_y = min(abs(y - plot_y_min), abs(y - plot_y_max))
+                        adjusted_r = min(r, max_r_x, max_r_y)
+                        if adjusted_r < r:
+                            print(f"Ограничил радиус с {r} до {adjusted_r} для окружности в ({x}, {y})")
+                        circ = Circle((x, y), adjusted_r, fill=False, edgecolor='red')
                         self.ax_cov.add_patch(circ)
                 except Exception as e:
                     print("Ошибка построения окружностей:", e)
 
-            # self.figure.tight_layout(pad=3.0)
             self.canvas.draw()
         except Exception as e:
             print("Ошибка изменения графиков:", e)
@@ -466,10 +479,18 @@ class GAVisualizer(QWidget):
                 fig_fitness.tight_layout()
                 fig_fitness.savefig("fitness_plot.png")
 
-                fig_cov = Figure(figsize=(8, 8))
+                fig_cov = Figure(figsize=(12, 10))
                 ax2 = fig_cov.add_subplot(111)
                 if self.points:
                     xs, ys = zip(*self.points)
+                    min_x, max_x = min(xs), max(xs)
+                    min_y, max_y = min(ys), max(ys)
+                    x_range = max_x - min_x
+                    y_range = max_y - min_y
+                    padding_x = x_range * 0.3 if x_range > 0 else 15  # Increased padding_x
+                    padding_y = y_range * 0.2 if y_range > 0 else 10
+                    ax2.set_xlim(min_x - padding_x, min_x + (max_x - min_x) + 2 * padding_x)
+                    ax2.set_ylim(min_y - padding_y, min_y + (max_y - min_y) + 2 * padding_y)
                     ax2.scatter(xs, ys, color='black')
 
                 if self.ga and self.ga.population:
@@ -477,7 +498,12 @@ class GAVisualizer(QWidget):
                     for i in range(self.ga.M):
                         x, y, r = best[3 * i], best[3 * i + 1], best[3 * i + 2]
                         if r >= 0:
-                            circ = Circle((x, y), r, fill=False, edgecolor='red')
+                            plot_x_min, plot_x_max = ax2.get_xlim()
+                            plot_y_min, plot_y_max = ax2.get_ylim()
+                            max_r_x = min(abs(x - plot_x_min), abs(x - plot_x_max))
+                            max_r_y = min(abs(y - plot_y_min), abs(y - plot_y_max))
+                            adjusted_r = min(r, max_r_x, max_r_y)
+                            circ = Circle((x, y), adjusted_r, fill=False, edgecolor='red')
                             ax2.add_patch(circ)
                 ax2.set_title("Покрытие", fontsize=12)
                 ax2.set_xlabel("X координата", fontsize=12)
