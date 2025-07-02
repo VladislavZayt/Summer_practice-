@@ -1,7 +1,8 @@
 import random
 
+
 class GeneticAlgorithm:
-    def __init__(self, points, params):
+    def __init__(self, points, params, pop_size=50):
         self.points = points  # список (x, y)
         self.params = params  # dict с параметрами GA
         self.M = self.params.get('circles_count')  # число окружностей
@@ -9,7 +10,7 @@ class GeneticAlgorithm:
         self.population = []  # список особей: каждая особь — list длины 3*M
         self.history = []
         self.current_generation = 0
-        self.pop_size = 50
+        self.pop_size = pop_size
         self.r_min = 1.0
         self.r_max = 30.0
         self.crossover_tries = 5
@@ -17,7 +18,7 @@ class GeneticAlgorithm:
         self.current_fitness = []
         self.crossover_type = self.params.get('crossover_type')
         self.mutation_type = self.params.get('mutation_type')
-        self.penalty_coeff = 5.0 
+        self.penalty_coeff = 5.0
 
     def _compute_bounding_box(self, points):
         xs = [p[0] for p in points]
@@ -35,26 +36,25 @@ class GeneticAlgorithm:
                 if dist2 < (ri + rj) ** 2:
                     return True
         return False
-    
+
     def _penalty_intersections(self, individual):
         penalty = 0
         intersection_count = 0
-        
+
         for i in range(self.M):
-            xi, yi, ri = individual[3*i], individual[3*i+1], individual[3*i+2]
-            for j in range(i+1, self.M):
-                xj, yj, rj = individual[3*j], individual[3*j+1], individual[3*j+2]
-                dist = ((xi-xj)**2 + (yi-yj)**2) ** 0.5
+            xi, yi, ri = individual[3 * i], individual[3 * i + 1], individual[3 * i + 2]
+            for j in range(i + 1, self.M):
+                xj, yj, rj = individual[3 * j], individual[3 * j + 1], individual[3 * j + 2]
+                dist = ((xi - xj) ** 2 + (yi - yj) ** 2) ** 0.5
                 if dist < (ri + rj):
                     penalty += ((ri + rj) - dist) * self.penalty_coeff
                     intersection_count += 1
-                    
+
         # Дополнительный штраф за количество пересечений
         if intersection_count > 0:
             penalty *= (1 + intersection_count * 0.1)
-            
+
         return penalty
-    
 
     def initialize_population(self):
 
@@ -91,7 +91,7 @@ class GeneticAlgorithm:
         cover_count = self._fitness_no_penalty(individual)
         penalty = min(self._penalty_intersections(individual), cover_count * 0.8)
         return cover_count - penalty
-    
+
     def _fitness_no_penalty(self, individual):
         cover_count = 0
         for (px, py) in self.points:
@@ -149,27 +149,27 @@ class GeneticAlgorithm:
             child1 = []
             child2 = []
             xmin, xmax, ymin, ymax = self.bounding_box
-            
+
             for i in range(0, len(pt1)):
                 min_val = min(pt1[i], pt2[i])
                 max_val = max(pt1[i], pt2[i])
-                if i % 3 == 0: 
+                if i % 3 == 0:
                     lower_bound = max(min_val - alpha * (max_val - min_val), xmin)
                     upper_bound = min(max_val + alpha * (max_val - min_val), xmax)
                 elif i % 3 == 1:
                     lower_bound = max(min_val - alpha * (max_val - min_val), ymin)
                     upper_bound = min(max_val + alpha * (max_val - min_val), ymax)
-                else: 
-                    x = (pt1[i-2] + pt2[i-2]) / 2  
-                    y = (pt1[i-1] + pt2[i-1]) / 2  
-                    max_possible_r = min(xmax-x, x-xmin, ymax-y, y-ymin, self.r_max)
-                    
+                else:
+                    x = (pt1[i - 2] + pt2[i - 2]) / 2
+                    y = (pt1[i - 1] + pt2[i - 1]) / 2
+                    max_possible_r = min(xmax - x, x - xmin, ymax - y, y - ymin, self.r_max)
+
                     lower_bound = max(min_val - alpha * (max_val - min_val), self.r_min)
                     upper_bound = min(max_val + alpha * (max_val - min_val), max_possible_r)
-                
+
                 child1.append(random.uniform(lower_bound, upper_bound))
                 child2.append(random.uniform(lower_bound, upper_bound))
-            
+
             return child1, child2
 
         max_tries = self.crossover_tries
@@ -196,6 +196,7 @@ class GeneticAlgorithm:
                 child2 = p2.copy()
                 print("Error!")
         return child1, child2
+
     def mutate(self, individual, type_flag):
         """
         Функция мутированния
