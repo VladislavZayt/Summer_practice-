@@ -97,6 +97,7 @@ class GAWindow(QMainWindow):
 
         param_defs = {
             # "num_points": (1, 50, 20),
+            'population_size': (5, 500, 50),
             'num_generations': (1, 1000, 50),
             'crossover_rate': (0.0, 1.0, 0.7),
             'mutation_rate': (0.0, 1.0, 0.1),
@@ -108,6 +109,7 @@ class GAWindow(QMainWindow):
         }
         param_descriptions = {
             # "num_points": "Количество точек (num_points)",
+            'population_size': "Размер популяции (population_size)",
             'num_generations': "Количество поколений (num_generations)",
             'crossover_rate': "Вероятность скрещивания (crossover_rate)",
             'mutation_rate': "Вероятность мутации (mutation_rate)",
@@ -260,6 +262,8 @@ class GAWindow(QMainWindow):
                 return
         try:
             params = self.get_params()
+            pop_size = params.get("population_size", 50)
+
         except Exception as e:
             QMessageBox.critical(self, "Ошибка параметров", str(e))
             return
@@ -276,7 +280,7 @@ class GAWindow(QMainWindow):
             params["circles_count"] = suggested
 
         try:
-            self.ga = GeneticAlgorithm(self.points, params)
+            self.ga = GeneticAlgorithm(self.points, params, pop_size)
             self.ga.initialize_population()
             self.ga.history = [copy.deepcopy(self.ga.population)]
             self.canvas.set_ga(self.ga)
