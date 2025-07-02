@@ -487,7 +487,7 @@ class GAVisualizer(QWidget):
                     min_y, max_y = min(ys), max(ys)
                     x_range = max_x - min_x
                     y_range = max_y - min_y
-                    padding_x = x_range * 0.3 if x_range > 0 else 15  # Increased padding_x
+                    padding_x = x_range * 0.3 if x_range > 0 else 15
                     padding_y = y_range * 0.2 if y_range > 0 else 10
                     ax2.set_xlim(min_x - padding_x, min_x + (max_x - min_x) + 2 * padding_x)
                     ax2.set_ylim(min_y - padding_y, min_y + (max_y - min_y) + 2 * padding_y)
