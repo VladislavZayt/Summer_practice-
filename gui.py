@@ -98,9 +98,9 @@ class GAWindow(QMainWindow):
         param_defs = {
             # "num_points": (1, 50, 20),
             'population_size': (5, 500, 50),
-            'num_generations': (1, 1000, 50),
+            'num_generations': (1, 1000, 150),
             'crossover_rate': (0.0, 1.0, 0.7),
-            'mutation_rate': (0.0, 1.0, 0.1),
+            'mutation_rate': (0.0, 1.0, 0.2),
             'mu': (0.0, 10.0, 0.0),
             'sigma': (0.1, 20.0, 5.0),
             'delta': (1.0, 10.0, 2.0),
@@ -171,9 +171,8 @@ class GAWindow(QMainWindow):
         self.mutation_type = index
 
     def clear_circles_only(self):
-        if hasattr(self, 'ga'):
-            self.ga = None
-            self.canvas.reset()
+        self.canvas.ga = None
+        self.canvas.update_plot()
 
     def generate_points(self):
         num_points, ok = QInputDialog.getInt(self, "Генерация точек", "Введите количество точек:", min=2, max=200,
@@ -370,13 +369,15 @@ class GAWindow(QMainWindow):
 class GAVisualizer(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.figure = Figure(figsize=(12, 10))
+        self.figure = Figure(figsize=(14, 10))
         self.canvas = FigureCanvas(self.figure)
         layout = QVBoxLayout()
         layout.addWidget(self.canvas)
         self.setLayout(layout)
         self.ga = None
         self.points = []
+        self.ax_fitness = None
+        self.ax_cov = None
 
     def set_points(self, points):
         self.points = points
@@ -463,6 +464,10 @@ class GAVisualizer(QWidget):
             print("Ошибка изменения графиков:", e)
         print("update_plot: end")
 
+    def clear_circles_only(self):
+        self.ga = None
+        self.update_plot()
+
     def save_plots(self):
         try:
             if hasattr(self, 'ax_fitness') and hasattr(self, 'ax_cov'):
@@ -522,4 +527,7 @@ class GAVisualizer(QWidget):
         if clear_points:
             self.points = []
         self.ga = None
-        self.update_plot()
+        self.ax_fitness = None
+        self.ax_cov = None
+        self.figure.clear()
+        self.canvas.draw()
