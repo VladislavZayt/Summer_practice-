@@ -11,14 +11,14 @@ class GeneticAlgorithm:
         self.history = []
         self.current_generation = 0
         self.pop_size = pop_size
-        self.r_min = 1.0
-        self.r_max = 30.0
+        self.r_min = 5.0 
+        self.r_max = 50.0
         self.crossover_tries = 5
         self.stats = {'best': [], 'average': []}
         self.current_fitness = []
         self.crossover_type = self.params.get('crossover_type')
         self.mutation_type = self.params.get('mutation_type')
-        self.penalty_coeff = 5.0
+        self.penalty_coeff = 500.0
 
     def _compute_bounding_box(self, points):
         xs = [p[0] for p in points]
@@ -81,7 +81,13 @@ class GeneticAlgorithm:
             fit = self._fitness_with_penalty(ind)
             fitness_values.append(fit)
         best = max(fitness_values)
-        avg = sum(fitness_values) / len(fitness_values) if fitness_values else 0.0
+        sum = 0
+        if fitness_values:
+            for i in range(0, len(fitness_values)):
+                if fitness_values[i] >= 0:
+                    sum += fitness_values[i]
+
+        avg = sum / len(fitness_values) 
         self.stats['best'].append(best)
         self.stats['average'].append(avg)
         self.current_fitness = fitness_values
@@ -89,7 +95,8 @@ class GeneticAlgorithm:
 
     def _fitness_with_penalty(self, individual):
         cover_count = self._fitness_no_penalty(individual)
-        penalty = min(self._penalty_intersections(individual), cover_count * 0.8)
+        penalty = self._penalty_intersections(individual)
+
         return cover_count - penalty
 
     def _fitness_no_penalty(self, individual):

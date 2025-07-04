@@ -1,0 +1,57 @@
+Gen 1: Best = 6.00, Avg = 0.12
+update_plot: start
+update_plot: end
+Gen 2: Best = 8.00, Avg = 0.52
+update_plot: start
+update_plot: end
+Gen 150: Best = 18.00, Avg = 16.36
+update_plot: start
+update_plot: end
+Gen 1: Best = -246705.00, Avg = 0.00
+update_plot: start
+update_plot: end
+Gen 2: Best = -116100.36, Avg = 0.00
+update_plot: start
+update_plot: end
+Gen 3: Best = -116100.36, Avg = 0.00
+update_plot: start
+update_plot: end
+Gen 4: Best = -104974.29, Avg = 0.00
+update_plot: start
+update_plot: end
+Gen 5: Best = -104974.29, Avg = 0.00
+update_plot: start
+update_plot: end
+Gen 6: Best = -75318.89, Avg = 0.00
+update_plot: start
+update_plot: end
+Gen 7: Best = -71753.76, Avg = 0.00
+update_plot: start
+update_plot: end
+Gen 8: Best = -24913.85, Avg = 0.00
+update_plot: start
+update_plot: end
+Gen 9: Best = -19086.17, Avg = 0.00
+update_plot: start
+update_plot: end
+Gen 10: Best = -16346.39, Avg = 0.00
+update_plot: start
+update_plot: end
+Gen 11: Best = -16346.39, Avg = 0.00
+update_plot: start
+update_plot: end
+Gen 12: Best = -6296.93, Avg = 0.00
+update_plot: start
+update_plot: end
+Gen 13: Best = -6296.93, Avg = 0.00
+update_plot: start
+update_plot: end
+Gen 14: Best = -6296.93, Avg = 0.00
+update_plot: start
+update_plot: end
+Gen 15: Best = -5003.09, Avg = 0.00
+update_plot: start
+update_plot: end
+Gen 150: Best = 105.00, Avg = 63.88
+update_plot: start
+update_plot: end
