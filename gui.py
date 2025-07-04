@@ -11,7 +11,7 @@ from PyQt5.QtCore import QTimer
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.patches import Circle
-from ga_p import GeneticAlgorithm
+from genetic_algorithm_penalty import GeneticAlgorithm
 from input import load_data
 
 
@@ -96,19 +96,17 @@ class GAWindow(QMainWindow):
         form = QFormLayout()
 
         param_defs = {
-            # "num_points": (1, 50, 20),
             'population_size': (5, 500, 50),
             'num_generations': (1, 1000, 150),
             'crossover_rate': (0.0, 1.0, 0.7),
             'mutation_rate': (0.0, 1.0, 0.2),
             'mu': (0.0, 10.0, 0.0),
-            'sigma': (0.1, 20.0, 5.0),
+            'sigma': (0.1, 20.0, 1.0),
             'delta': (1.0, 10.0, 2.0),
             'tournament_size': (1, 10, 3),
             "circles_count": (2, 20, 5),
         }
         param_descriptions = {
-            # "num_points": "Количество точек (num_points)",
             'population_size': "Размер популяции (population_size)",
             'num_generations': "Количество поколений (num_generations)",
             'crossover_rate': "Вероятность скрещивания (crossover_rate)",
